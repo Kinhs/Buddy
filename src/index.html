@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Buddy</title>
+<style>
+  :root {
+    --ink: #2b2118; --paper: #fff8ee; --accent: #e07a3f; --muted: #8a7a6a;
+    --ok: #4f9d5d; --no: #c2453a; --line: #2b2118;
+    font: 13px/1.35 ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
+  body { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; }
+
+  #stage { position: relative; width: 180px; height: 150px; flex: none; cursor: grab; }
+  #sprite { position: absolute; left: 26px; bottom: 6px; width: 128px; height: 128px; image-rendering: pixelated; }
+  body.itachi #stage { height: 200px; }
+  body.itachi #sprite { left: 10px; bottom: 14px; width: 160px; height: 180px; }
+  #fx { position: absolute; inset: 0; pointer-events: none; font-weight: bold; color: var(--ink); }
+  #tag { position: absolute; right: 6px; bottom: 0; font-size: 10px; color: var(--paper);
+    background: var(--ink); padding: 1px 5px; border-radius: 3px; max-width: 160px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85; cursor: pointer; }
+
+  .bubble { background: var(--paper); color: var(--ink); border: 2px solid var(--line);
+    border-radius: 6px; padding: 6px 8px; margin: 0 8px 2px; box-shadow: 3px 3px 0 var(--line);
+    max-width: 260px; word-wrap: break-word; }
+  /* max-content so the width can be measured before the window grows; clamp long commands to 3 lines */
+  #say { flex: none; font-size: 12px; box-sizing: border-box; width: max-content; max-width: 264px; word-break: break-all; }
+  #say[hidden] { display: none; }
+  #sayt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+
+  #panel { display: none; flex: none; box-sizing: border-box; width: 284px; max-height: 360px; overflow-y: auto; }
+  #panel .mk { display: block; width: 140px; margin: 0 auto 6px; image-rendering: pixelated; }
+  #panel h4 { margin: 0 0 4px; font-size: 12px; color: var(--accent); }
+  #panel .q { margin-bottom: 8px; }
+  #panel .qt { margin-bottom: 4px; }
+  #panel .opts { display: flex; flex-direction: column; gap: 3px; }
+  button { font: inherit; text-align: left; cursor: pointer; background: #fff; color: var(--ink);
+    border: 2px solid var(--line); border-radius: 4px; padding: 3px 6px; }
+  button:hover { background: #ffe6d2; }
+  button.sel { background: var(--accent); color: #fff; }
+  button small { display: block; color: var(--muted); font-size: 10px; }
+  button.sel small { color: #ffe6d2; }
+  .row { display: flex; gap: 4px; margin-top: 6px; }
+  .row button { flex: 1; text-align: center; }
+  .ok { background: var(--ok); color: #fff; } .no { background: var(--no); color: #fff; }
+  code { background: #f0e4d4; padding: 0 3px; border-radius: 2px; word-break: break-all; }
+
+  @keyframes floatz { from { transform: translate(0,0); opacity: 1 } to { transform: translate(14px,-30px); opacity: 0 } }
+  .z { position: absolute; animation: floatz 2.4s linear infinite; }
+  @keyframes pop { 0%,100% { transform: scale(1) } 50% { transform: scale(1.25) } }
+  .mark { position: absolute; left: 116px; top: 2px; font-size: 22px; color: var(--accent); animation: pop .8s infinite; }
+</style>
+</head>
+<body>
+  <div id="panel" class="bubble"></div>
+  <div id="say" class="bubble" hidden><span id="sayt"></span></div>
+  <div id="stage" data-tauri-drag-region>
+    <canvas id="sprite" width="16" height="16" data-tauri-drag-region></canvas>
+    <div id="fx"></div>
+    <div id="tag">buddy</div>
+  </div>
+  <script src="bridge.js"></script>
+  <script src="sessions.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
