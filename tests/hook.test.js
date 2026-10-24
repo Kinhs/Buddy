@@ -82,3 +82,16 @@ test('Buddy not running: exits 0 with no output', async () => {
   assert.strictEqual(code, 0);
   assert.strictEqual(out, '');
 });
+
+test('Claude app next-step box is shown read-only: waiting + question + choice labels, no output', async () => {
+  const b = await fakeBuddy({});
+  const { out } = await runHook({ hook_event_name: 'PreToolUse', session_id: 's1', cwd: '/x/Buddy', tool_name: 'mcp__ccd_turn__wrap_up',
+    tool_input: { recap: 'Did things.', ask: 'Fix the findings?', actions: [{ label: 'Fix all', message: 'Fix all.' }, { action: 'commit' }] } }, b.port);
+  const r2 = await runHook({ hook_event_name: 'PreToolUse', session_id: 's1', cwd: '/x', tool_name: 'mcp__ccd_turn__wrap_up',
+    tool_input: { recap: 'Nothing pending.' } }, b.port);
+  b.server.close();
+  assert.strictEqual(out + r2.out, '');
+  assert.strictEqual(b.seen.length, 1); // a recap without a question sends nothing
+  const e = b.seen[0].body;
+  assert.deepStrictEqual([e.kind, e.message, e.choices], ['waiting', 'Fix the findings?', ['Fix all', 'commit']]);
+});

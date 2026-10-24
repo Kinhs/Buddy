@@ -61,6 +61,11 @@ async function claude(h) {
       if (WAITING.has(h.notification_type)) return event({ kind: 'waiting', message: h.message });
       return;
     case 'PreToolUse': {
+      if (h.tool_name.endsWith('__wrap_up')) { // Claude desktop app's next-step box: display only, the answer is clicked in the app
+        const t = h.tool_input || {};
+        if (t.ask) return event({ kind: 'waiting', message: t.ask, choices: (t.actions || []).map((x) => x.label || x.action).filter(Boolean) });
+        return;
+      }
       if (h.tool_name !== 'AskUserQuestion') return event({ kind: 'working', tool: h.tool_name, detail: toolDetail(h.tool_input) });
       const r = await post('/ask', { ...base, kind: 'question', questions: h.tool_input.questions });
       if (r && r.answers) print({ hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: { ...h.tool_input, answers: r.answers } });

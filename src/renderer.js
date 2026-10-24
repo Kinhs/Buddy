@@ -41,6 +41,7 @@ let state = 'idle';        // idle | sleep | working | done | waiting | asking |
 let since = Date.now();    // last state update, drives mood decay
 let info = { agent: 'buddy', project: '' };
 let asks = [];             // queued questions / permission requests
+let notice = null;         // read-only question from the Claude app's next-step box: { session, agent, message, choices }
 let t = 0;
 let tool = '';             // last tool reported by the agent, picks the Itachi working pose
 let skin = 'akatsuki';
@@ -200,7 +201,7 @@ function setState(s, text) {
 
 function fit() {
   requestAnimationFrame(() => {
-    const open = asks.length > 0;
+    const open = asks.length > 0 || !!notice;
     panel.style.display = open ? 'block' : 'none';
     const h = $('stage').offsetHeight + (say.textContent ? say.offsetHeight + 4 : 0) + (open ? panel.offsetHeight + 4 : 0) + 8;
     const w = open ? 300 : Math.max(180, say.textContent ? say.offsetWidth + 20 : 0);
@@ -217,6 +218,10 @@ window.buddy.onEvent((e) => {
   info = { agent: e.agent || info.agent, project: e.project || info.project };
   lastKind = e.kind;
   const othersBusy = sessions.update(e); // another session still working keeps Buddy in "working"
+  const mine = notice && (!e.session || e.session === notice.session);
+  if (e.kind === 'waiting' && e.choices) { notice = { session: e.session, agent: e.agent, message: e.message, choices: e.choices }; renderAsk(); return setState('waiting', ''); }
+  if (mine && e.kind === 'done') return setState('waiting', ''); // the turn ends right after the box: keep showing the question
+  if (mine && (e.kind === 'working' || e.kind === 'end')) { notice = null; renderAsk(); } // user replied or left
 
   if (e.kind === 'working') tool = e.tool || '';
   if (e.kind === 'working') setState('working', e.tool ? `${TOOL_VERBS[e.tool] || e.tool}${e.detail ? ' ' + e.detail : '…'}` : 'On it…');
@@ -250,7 +255,15 @@ function reply(id, result) {
 function renderAsk() {
   panel.innerHTML = '';
   const a = asks[0];
-  if (!a) return;
+  if (!a) {
+    if (notice) panel.append(
+      el('h4', { textContent: `${notice.agent || 'Agent'} asks` }),
+      el('div', { className: 'qt', textContent: notice.message }),
+      el('div', { className: 'chips' }, notice.choices.map((c) => el('span', { className: 'chip', textContent: c }))),
+      el('div', { className: 'hint', textContent: 'Answer in the Claude app' }),
+    );
+    return;
+  }
   const more = asks.length > 1 ? ` (+${asks.length - 1} more)` : '';
   const terminal = el('button', { textContent: 'Terminal', title: 'Answer in the terminal instead', onclick: () => reply(a.id, {}) });
 
