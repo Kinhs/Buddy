@@ -31,7 +31,7 @@ npm run install-hooks
 - `install-hooks` merges hooks into `~/.claude/settings.json`. The first run saves the original as `settings.json.bak`; later runs never overwrite it. Restart Claude Code sessions afterwards.
 
 Drag Buddy to move it. Click the name tag for the menu:
-- **Skin**: Clay blob, Itachi (robe) or Itachi (Akatsuki). Remembered across restarts.
+- **Skin**: Clay blob or Itachi (Akatsuki). Remembered across restarts.
 - **System notifications**: on/off. Buddy's own animations still show everything.
 - **Quit**.
 

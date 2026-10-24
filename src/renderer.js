@@ -1,4 +1,4 @@
-// Skins: 'blob' is a 16x16 sprite drawn in code; 'itachi' plays 80x90 pose PNGs. Both scale with CSS image-rendering: pixelated.
+// Skins: 'blob' is a 16x16 sprite drawn in code; 'akatsuki' (Itachi) plays 80x90 pose PNGs. Both scale with CSS image-rendering: pixelated.
 const PAL = {
   D: '#7a3a1c', O: '#e07a3f', H: '#f6a873', K: '#2b2118', W: '#ffffff', P: '#f28b8b',
   L: '#b9c0c8', G: '#5d6670', S: '#7fd3ff', M: '#8b5a3c',
@@ -43,8 +43,8 @@ let info = { agent: 'buddy', project: '' };
 let asks = [];             // queued questions / permission requests
 let t = 0;
 let tool = '';             // last tool reported by the agent, picks the Itachi working pose
-let skin = 'itachi';
-try { skin = localStorage.getItem('skin') || 'itachi'; } catch {}
+let skin = 'akatsuki';
+try { skin = localStorage.getItem('skin') || 'akatsuki'; } catch {}
 
 // Pose skins. A timeline is a looped list of [pose, ms] steps, or { intro, loop } to play `intro` once first.
 const times = (n, steps) => Array(n).fill(steps).flat();
@@ -56,29 +56,7 @@ const AK_CALM = new Set(['idle1', 'idle2', 'blink', 'crow2', 'dango1', 'dango2',
 const CROW = new Image(); CROW.src = 'skins/akatsuki/crow.png';
 const PERCH = [54, 32]; // where crow.png sits in the crow2 frame
 const SKINS = {
-  itachi: {
-    anchor: true, // poses differ in size: line them up on the feet
-    poses: ['idle', 'seal1', 'seal2', 'seal3', 'ready', 'focus', 'summon', 'victory', 'defeat', 'hurt', 'attack1', 'attack2', 'run', 'dash', 'jutsu'],
-    timelines: {
-      idle: [['idle', 9000], ['victory', 1800]],
-      seals: [['seal1', 240], ['seal2', 240], ['seal3', 520], ['seal2', 240]],
-      bash: [['attack1', 560], ['attack2', 340]],
-      search: [['run', 220], ['dash', 280]],
-      jutsu: [['jutsu', 1e3]], asking: [['ready', 1e3]], waiting: [['focus', 1e3]],
-      summon: [['summon', 1e3]], victory: [['victory', 1e3]], sleep: [['defeat', 1e3]], error: [['hurt', 1e3]],
-    },
-    tools: { Bash: 'bash', Grep: 'search', Glob: 'search', WebSearch: 'search', WebFetch: 'search', Agent: 'jutsu', Task: 'jutsu' },
-    pick(now) {
-      switch (state) {
-        case 'working': return this.tools[tool] || 'seals';
-        case 'done': return now - entered < 2200 ? 'summon' : 'victory';
-        case 'asking': case 'waiting': case 'sleep': case 'error': return state;
-        default: return 'idle';
-      }
-    },
-  },
   akatsuki: {
-    anchor: false, // every frame is a full 80x90 cell
     poses: ['idle1', 'idle2', 'blink', 'crow2', 'dango1', 'dango2', 'snake', 'ram', 'monkey', 'boar', 'horse', 'tiger',
       'fire1', 'fire2', 'fire3', 'sharingan1', 'sharingan2', 'glance1', 'glance2', 'clone1', 'clone2', 'clone3', 'clone4',
       'reform1', 'reform2', 'reform3', 'susanoo1', 'susanoo2', 'susanoo3', 'amaterasu1', 'amaterasu2',
@@ -115,24 +93,11 @@ const SKINS = {
   },
 };
 for (const [name, sk] of Object.entries(SKINS)) {
-  sk.img = {}; sk.feet = {}; // pose -> mean x of its bottom rows (anchored skins only)
-  for (const n of sk.poses) {
-    const i = new Image();
-    if (sk.anchor) i.onload = () => {
-      const c = document.createElement('canvas'); c.width = i.width; c.height = i.height;
-      const g = c.getContext('2d'); g.drawImage(i, 0, 0);
-      const d = g.getImageData(0, i.height - 8, i.width, 8).data;
-      let sum = 0, k = 0;
-      for (let p = 3; p < d.length; p += 4) if (d[p]) { sum += ((p - 3) / 4) % i.width; k++; }
-      sk.feet[n] = k ? sum / k : i.width / 2;
-    };
-    i.src = `skins/${name}/${n}.png`;
-    sk.img[n] = i;
-  }
+  sk.img = Object.fromEntries(sk.poses.map((n) => { const i = new Image(); i.src = `skins/${name}/${n}.png`; return [n, i]; }));
 }
 let entered = performance.now(); // when `state` last changed (unlike `since`, repeat events don't reset it)
 let lastKind = '';         // last event kind, lets idle tell an arrival or departure apart
-let tl = '', tlStart = 0, tlState = '', poofAt = -1e9, crows = [];
+let tl = '', tlStart = 0, tlState = '', poofAt = -1e9;
 
 function px(x, y, c) { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); }
 function rows(map, dy) {
@@ -150,9 +115,7 @@ function drawPoses() {
   const now = performance.now(), sk = SKINS[skin];
   const k = sk.pick(now);
   if (k !== tl) {
-    if (tl === 'summon') // the summoned crows scatter
-      crows = [...Array(6)].map((_, i) => ({ x: 40, y: 36, vx: (i - 2.5) * 0.035, vy: -0.03 - (i % 3) * 0.012, born: now }));
-    else if (tl && tlState !== state) poofAt = now; // dust on state changes, not on every tool switch
+    if (tl && tlState !== state) poofAt = now; // dust on state changes, not on every tool switch
     tl = k; tlStart = now; tlState = state;
   }
   const def = sk.timelines[k], intro = def.intro || [], loop = def.loop || def;
@@ -165,38 +128,20 @@ function drawPoses() {
   [pose, crowFx] = pose.split('>');
 
   let dx = 0, dy = 0;
-  if (sk.anchor ? k === 'idle' || k === 'waiting' : AK_CALM.has(pose)) dy = Math.sin(now / 255) > 0.3 ? 1 : 0; // ~1.6 s breath
+  if (AK_CALM.has(pose)) dy = Math.sin(now / 255) > 0.3 ? 1 : 0; // ~1.6 s breath
   if (k === 'sleep') dy = Math.sin(now / 420) > 0 ? 1 : 0;
   if (k === 'asking') dy = now % 1200 < 140 ? 2 : 0; // alert hop
   if (k === 'error' && now - tlStart < 450) dx = Math.floor(now / 45) % 2 ? 1 : -1;
 
   ctx.clearRect(0, 0, 80, 90);
-  const behind = [], front = [];
-  if (k === 'search') for (let i = 0; i < 6; i++) { // speed lines streaming behind
-    const y = 34 + i * 7 + (i % 2) * 3, len = 5 + (i * 5) % 8, x = 58 - ((now * 0.11 + i * 29) % 72);
-    for (let j = 0; j < len; j++) behind.push([x + j, y, 1, i % 2 ? '#a58be6' : '#d4c6ff', (j + 1) / len * 0.8]);
-  }
-  if (k === 'jutsu') for (let i = 0; i < 12; i++) { // chakra orbit, back half drawn behind him
-    const a = now / 520 + i * Math.PI / 6, x = 40 + Math.cos(a) * 30, y = 52 + Math.sin(a) * 13;
-    (Math.sin(a) > 0 ? front : behind).push([x, y, i % 3 ? 1 : 2, i % 2 ? '#8f6fe0' : '#c9b6ff', 0.9]);
-  }
-  if (k === 'seals' && pose === 'seal3') for (let i = 0; i < 4; i++) { // chakra flicker as the seal locks
-    const a = now / 90 + i * 1.6; front.push([40 + Math.cos(a) * 6, 40 + Math.sin(a) * 4, 1, '#cfefff', 0.9]);
-  }
-  behind.forEach((b) => blot(...b));
-
   const img = sk.img[pose];
-  if (img.complete && img.naturalWidth) {
-    const x = sk.anchor ? Math.min(Math.max(Math.round(40 - (sk.feet[pose] ?? img.width / 2)), 0), 80 - img.width) : 0; // keep wide poses on canvas
-    ctx.drawImage(img, x + dx, 90 - img.height - dy);
-  }
+  if (img.complete && img.naturalWidth) ctx.drawImage(img, dx, -dy);
   if (crowFx && CROW.complete) { // glide in from / out to the top right, easing into and out of the perch
     const e = crowFx === 'land' ? 1 - (1 - stepP) ** 2 : stepP ** 2;
     const [fx, fy] = crowFx === 'land' ? [86, -30] : [92, -34];
     const f = crowFx === 'land' ? 1 - e : e, flap = Math.floor(now / 90) % 2;
     ctx.drawImage(CROW, Math.round(PERCH[0] + (fx - PERCH[0]) * f), Math.round(PERCH[1] + (fy - PERCH[1]) * f) - dy - (f > 0.05 ? flap : 0));
   }
-  front.forEach((f) => blot(...f));
 
   const pp = (now - poofAt) / 320; // dust kicked up at the feet when the pose set changes
   if (pp < 1) for (let i = 0; i < 10; i++) {
@@ -205,11 +150,6 @@ function drawPoses() {
   }
   const mk = panel.querySelector('.mk'), mi = String(Math.floor(now / 260) % 3 + 1);
   if (mk && mk.dataset.i !== mi) { mk.dataset.i = mi; mk.src = `skins/akatsuki/mangekyo${mi}.png`; }
-  crows = crows.filter((c) => now - c.born < 1500);
-  for (const c of crows) {
-    const age = now - c.born, x = c.x + c.vx * age, y = c.y + c.vy * age, flap = Math.floor(age / 110) % 2;
-    for (const [ox, oy] of [[0, -flap], [1, 0], [2, 1], [3, 0], [4, -flap], [2, 2]]) blot(x + ox - 2, y + oy, 1, '#101016', 1 - age / 1500);
-  }
 }
 
 function draw() {
@@ -367,7 +307,7 @@ setInterval(() => {
 setInterval(() => { t = Math.floor(performance.now() / 150); draw(); }, 50); // blob steps every 150 ms, Itachi effects run at 20 fps
 
 function applySkin(name) {
-  skin = name in SKINS ? name : 'blob';
+  skin = name === 'blob' || name in SKINS ? name : 'akatsuki'; // unknown or removed skins (e.g. the old 'itachi') fall back to Itachi
   try { localStorage.setItem('skin', skin); } catch {}
   const c = $('sprite');
   [c.width, c.height] = SKINS[skin] ? [80, 90] : [16, 16];

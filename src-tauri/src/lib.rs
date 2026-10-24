@@ -132,12 +132,11 @@ fn menu(window: WebviewWindow, skin: String) -> tauri::Result<()> {
     let app = window.app_handle();
     let info = MenuItem::with_id(app, "port", format!("Listening on 127.0.0.1:{}", port()), false, None::<&str>)?;
     let blob = CheckMenuItem::with_id(app, "skin:blob", "Skin: Clay blob", true, skin == "blob", None::<&str>)?;
-    let itachi = CheckMenuItem::with_id(app, "skin:itachi", "Skin: Itachi (robe)", true, skin == "itachi", None::<&str>)?;
-    let akatsuki = CheckMenuItem::with_id(app, "skin:akatsuki", "Skin: Itachi (Akatsuki)", true, skin == "akatsuki", None::<&str>)?;
+    let akatsuki = CheckMenuItem::with_id(app, "skin:akatsuki", "Skin: Itachi", true, skin == "akatsuki", None::<&str>)?;
     let notif = CheckMenuItem::with_id(app, "notify", "System notifications", true, NOTIFY.load(Ordering::Relaxed), None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Buddy", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
-    let m = Menu::with_items(app, &[&info, &sep, &blob, &itachi, &akatsuki, &PredefinedMenuItem::separator(app)?, &notif, &PredefinedMenuItem::separator(app)?, &quit])?;
+    let m = Menu::with_items(app, &[&info, &sep, &blob, &akatsuki, &PredefinedMenuItem::separator(app)?, &notif, &PredefinedMenuItem::separator(app)?, &quit])?;
     window.popup_menu(&m)
 }
 
