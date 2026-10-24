@@ -13,9 +13,8 @@
   body { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; }
 
   #stage { position: relative; width: 180px; height: 150px; flex: none; cursor: grab; }
-  #sprite { position: absolute; left: 26px; bottom: 6px; width: 128px; height: 128px; image-rendering: pixelated; }
-  body.itachi #stage { height: 200px; }
-  body.itachi #sprite { left: 10px; bottom: 14px; width: 160px; height: 180px; }
+  #sprite { position: absolute; bottom: 6px; } /* size and left are set by blit() */
+  body.itachi #sprite { bottom: 14px; }
   #fx { position: absolute; inset: 0; pointer-events: none; font-weight: bold; color: var(--ink); }
   #tag { position: absolute; right: 6px; bottom: 0; font-size: 10px; color: var(--paper);
     background: var(--ink); padding: 1px 5px; border-radius: 3px; max-width: 160px;

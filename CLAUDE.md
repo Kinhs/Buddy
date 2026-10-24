@@ -30,6 +30,7 @@ Data flow: agent hook → `hooks/buddy-hook.js` → HTTP `127.0.0.1:47321` → R
   - `since` resets on every event (mood decay: done→idle 20 s, idle→sleep 3 min, error→working 5 s); `entered` resets only when the state changes (Susanoo long-task stages, done intro timing).
   - Skins: `blob` is drawn in code (16×16). Pose skins live in `SKINS` (currently only `akatsuki`). Each has `poses` (PNGs in `src/skins/<name>/`), `timelines` (looped `[pose, ms]` lists, or `{ intro, loop }`), `tools` (tool name → timeline) and `pick(now)` (state → timeline key). A step named `'pose>land'` / `'pose>leave'` draws that pose plus the crow sprite flying to or from `PERCH`.
   - Pose frames are full 80×90 cells drawn at (0,0): new frames must be 80×90 with the feet on row 88, or poses jump when they swap. `AK_CALM` lists held frames that get the 1 px breathing bob.
+  - Drawing goes to an offscreen 1:1 `art` canvas; `blit()` copies it to `#sprite` at a whole number of device pixels per art pixel with smoothing off. Don't rely on CSS `image-rendering: pixelated`: WebKitGTK smooths CSS-upscaled canvases (Buddy looked blurry on a 125%-scaled GNOME screen).
   - `fit()` sizes the window to its content (resize anchored bottom-right, so transparent space doesn't block clicks). `resizable` must stay `true` in `tauri.conf.json`: with `false`, GTK locks the window size.
 - **Linux**: `run()` forces `GDK_BACKEND=x11`, because GNOME Wayland ignores always-on-top for native Wayland windows.
 

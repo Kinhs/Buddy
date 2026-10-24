@@ -1,4 +1,4 @@
-// Skins: 'blob' is a 16x16 sprite drawn in code; 'akatsuki' (Itachi) plays 80x90 pose PNGs. Both scale with CSS image-rendering: pixelated.
+// Skins: 'blob' is a 16x16 sprite drawn in code; 'akatsuki' (Itachi) plays 80x90 pose PNGs. Both are drawn 1:1 into `art`, then blit() scales them up.
 const PAL = {
   D: '#7a3a1c', O: '#e07a3f', H: '#f6a873', K: '#2b2118', W: '#ffffff', P: '#f28b8b',
   L: '#b9c0c8', G: '#5d6670', S: '#7fd3ff', M: '#8b5a3c',
@@ -34,7 +34,8 @@ const FACES = {
 const MOUTH = { smile: [[7, 10], [8, 10]], open: [[7, 10], [8, 10], [7, 11], [8, 11]] };
 
 const $ = (id) => document.getElementById(id);
-const ctx = $('sprite').getContext('2d');
+const art = document.createElement('canvas'), ctx = art.getContext('2d'); // 1 px per art pixel
+const view = $('sprite'), vctx = view.getContext('2d');             // on screen, at device resolution
 const fx = $('fx'), say = $('say'), panel = $('panel'), tag = $('tag');
 
 let state = 'idle';        // idle | sleep | working | done | waiting | asking | error
@@ -153,8 +154,27 @@ function drawPoses() {
   if (mk && mk.dataset.i !== mi) { mk.dataset.i = mi; mk.src = `skins/akatsuki/mangekyo${mi}.png`; }
 }
 
+// Scale the art by a whole number of device pixels per art pixel ourselves: WebKitGTK smooths CSS-upscaled canvases.
+function blit() {
+  const k = Math.max(1, Math.round((SKINS[skin] ? 2 : 8) * devicePixelRatio));
+  if (view.width !== art.width * k || view.height !== art.height * k) { // skin change, first frame, or a screen with another scale
+    view.width = art.width * k; view.height = art.height * k;
+    const w = view.width / devicePixelRatio, h = view.height / devicePixelRatio, sw = Math.max(180, Math.ceil(w) + 20);
+    Object.assign(view.style, { width: `${w}px`, height: `${h}px`, left: `${Math.round((sw - w) / 2)}px` });
+    Object.assign($('stage').style, { width: `${sw}px`, height: `${Math.ceil(h) + (SKINS[skin] ? 20 : 22)}px` });
+    fit();
+  }
+  vctx.imageSmoothingEnabled = false;
+  vctx.clearRect(0, 0, view.width, view.height);
+  vctx.drawImage(art, 0, 0, view.width, view.height);
+}
+
 function draw() {
-  if (SKINS[skin]) return drawPoses();
+  if (SKINS[skin]) drawPoses(); else drawBlob();
+  blit();
+}
+
+function drawBlob() {
   ctx.clearRect(0, 0, 16, 16);
   let dy = 0, eyes = 'open', mouth = 'smile', cheeks = true;
   const slow = Math.floor(t / 6) % 2;
@@ -204,7 +224,7 @@ function fit() {
     const open = asks.length > 0 || !!notice;
     panel.style.display = open ? 'block' : 'none';
     const h = $('stage').offsetHeight + (say.textContent ? say.offsetHeight + 4 : 0) + (open ? panel.offsetHeight + 4 : 0) + 8;
-    const w = open ? 300 : Math.max(180, say.textContent ? say.offsetWidth + 20 : 0);
+    const w = open ? 300 : Math.max($('stage').offsetWidth, say.textContent ? say.offsetWidth + 20 : 0);
     window.buddy.resize(Math.ceil(w), Math.ceil(h));
   });
 }
@@ -322,8 +342,7 @@ setInterval(() => { t = Math.floor(performance.now() / 150); draw(); }, 50); // 
 function applySkin(name) {
   skin = name === 'blob' || name in SKINS ? name : 'akatsuki'; // unknown or removed skins (e.g. the old 'itachi') fall back to Itachi
   try { localStorage.setItem('skin', skin); } catch {}
-  const c = $('sprite');
-  [c.width, c.height] = SKINS[skin] ? [80, 90] : [16, 16];
+  [art.width, art.height] = SKINS[skin] ? [80, 90] : [16, 16];
   document.body.classList.toggle('itachi', !!SKINS[skin]);
   setFx(state);
   draw();
